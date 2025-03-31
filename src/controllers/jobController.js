@@ -1,0 +1,192 @@
+import Job from '../models/Job.js';
+
+export const getJobsByCurrentUser = async (req, res) => {
+  try {
+    const jobs = await Job.find({ postedBy: req.userId })
+    .populate('applications.applicant', 'name ')
+    .sort({ createdAt: -1 });
+
+    res.json(jobs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const createJob = async (req, res) => {
+  try {
+    const { 
+      title, company, description, location, jobType,
+      experienceLevel, minExperience, applicationDeadline,
+      requiredSkills, requiredEducation, graduationYear, benefitsOffered
+    } = req.body;
+
+    const job = new Job({
+      title,
+      company,
+      description,
+      location,
+      jobType,
+      experienceLevel,
+      minExperience,
+      applicationDeadline,
+      requiredSkills,
+      requiredEducation,
+      graduationYear,
+      benefitsOffered,
+      postedBy: req.userId
+    });
+    
+    await job.save();
+    res.status(201).json(job);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const getJobs = async (req, res) => {
+  try {
+    const jobs = await Job.find({ status: 'open' })
+      .populate('postedBy', 'name')
+      .select('-applications')
+      .sort({ createdAt: -1 });
+      // .limit(20);
+    res.json(jobs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getJob = async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id)
+      .populate('postedBy', 'name')
+      .populate('applications.applicant', 'name ');
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    res.json(job);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const applyForJob = async (req, res) => {
+  try {
+    const { resumeLink } = req.body;
+    const job = await Job.findById(req.params.id);
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Check if already applied
+    if (job.applications.some(app => app.applicant.toString() === req.userId)) {
+      return res.status(400).json({ error: 'Already applied' });
+    }
+
+    job.applications.push({
+      applicant: req.userId,
+      resumeLink
+    });
+
+    await job.save();
+    res.json(job);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const searchJobs = async (req, res) => {
+  try {
+    const {
+      location, 
+      minExperience, 
+      graduationYear,
+      jobType,
+      branch
+    } = req.query;
+
+    const filter = { status: 'open' };
+    
+    if (location) {
+      filter.location = location; // values : 'remote', 'in-office', or 'hybrid'
+    }
+    
+    if (minExperience) {
+      filter.minExperience = { $lte: parseInt(minExperience) };
+    }
+    
+    if (graduationYear) {
+      // Simple direct match on graduationYear field
+      filter.graduationYear = parseInt(graduationYear);
+    }
+    
+    if (jobType) {
+      filter.jobType = jobType; // values: 'full-time', 'part-time', etc.
+    }
+    
+    if (branch) {
+      filter['requiredEducation.branch'] = branch; // set placeholder in app like this  'CSE', 'IT', etc.
+    }
+
+    const jobs = await Job.find(filter)
+      .populate('postedBy', 'name')
+      .sort({ createdAt: -1 });
+    
+    res.json(jobs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateJobStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const job = await Job.findById(req.params.id);
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    if (job.postedBy.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized to update this job' });
+    }
+    
+    job.status = status;
+    await job.save();
+    
+    res.json(job);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const updateApplicationStatus = async (req, res) => {
+  try {
+    const { applicationId, status } = req.body;
+    const job = await Job.findById(req.params.id);
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    // Check if the request is from the job poster
+    if (job.postedBy.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized to update applications' });
+    }
+    
+    const application = job.applications.id(applicationId);
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+    
+    application.status = status;
+    await job.save();
+    
+    res.json(job);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
