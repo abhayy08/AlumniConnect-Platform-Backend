@@ -46,7 +46,7 @@ export const createJob = async (req, res) => {
 
 export const getJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ status: 'open' })
+    const jobs = await Job.find({ status: 'open', applicationDeadline: { $gte: new Date() } })
       .populate('postedBy', 'name')
       .select('-applications')
       .sort({ createdAt: -1 });
@@ -133,7 +133,8 @@ export const searchJobs = async (req, res) => {
       minExperience,
       graduationYear,
       jobType,
-      branch
+      branch,
+      degree
     } = req.query;
 
     const filter = { status: 'open' };
@@ -147,7 +148,6 @@ export const searchJobs = async (req, res) => {
     }
 
     if (graduationYear) {
-      // Simple direct match on graduationYear field
       filter.graduationYear = parseInt(graduationYear);
     }
 
@@ -155,8 +155,13 @@ export const searchJobs = async (req, res) => {
       filter.jobType = jobType; // values: 'full-time', 'part-time', etc.
     }
 
+    // Update branch and degree filtering to work with the array structure
     if (branch) {
-      filter['requiredEducation.branch'] = branch; // set placeholder in app like this  'CSE', 'IT', etc.
+      filter['requiredEducation.branch'] = branch; // Now searches within the array
+    }
+    
+    if (degree) {
+      filter['requiredEducation.degree'] = degree; // Now searches within the array
     }
 
     const jobs = await Job.find(filter)

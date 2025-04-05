@@ -26,10 +26,10 @@ const jobSchema = new mongoose.Schema({
   applicationDeadline: { type: Date, required: true }, 
 
   requiredSkills: { type: [String], required: true },
-  requiredEducation: {
+  requiredEducation: [{
     degree: { type: String, required: true }, // "Bachelors", "Masters", "PhD"
     branch: { type: String, required: true }  // "CSE", "IT", "ECE", "BBA"
-  },
+  }],
 
   graduationYear: { type: Number, required: true },
 
