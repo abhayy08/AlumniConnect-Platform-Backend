@@ -155,13 +155,12 @@ export const searchJobs = async (req, res) => {
       filter.jobType = jobType; // values: 'full-time', 'part-time', etc.
     }
 
-    // Update branch and degree filtering to work with the array structure
     if (branch) {
-      filter['requiredEducation.branch'] = branch; // Now searches within the array
+      filter['requiredEducation.branch'] = branch;
     }
     
     if (degree) {
-      filter['requiredEducation.degree'] = degree; // Now searches within the array
+      filter['requiredEducation.degree'] = degree;
     }
 
     const jobs = await Job.find(filter)
