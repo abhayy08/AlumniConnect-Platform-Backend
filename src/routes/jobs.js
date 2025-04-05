@@ -8,13 +8,15 @@ import {
   searchJobs,
   updateJobStatus,
   updateApplicationStatus,
-  getJobsByCurrentUser
+  getJobsByCurrentUser,
+  getJobsAppliedByUser
 } from '../controllers/jobController.js';
 
 const router = express.Router();
 
 router.post('/', auth, createJob);
 router.get('/', auth, getJobs);
+router.get('/applied', auth, getJobsAppliedByUser);
 router.get('/me', auth, getJobsByCurrentUser)
 router.get('/search', auth, searchJobs);
 router.get('/:id', auth, getJob);

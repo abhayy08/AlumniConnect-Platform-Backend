@@ -23,7 +23,7 @@ const jobSchema = new mongoose.Schema({
     enum: ['entry', 'mid', 'senior']
   },
   minExperience: { type: Number, required: true }, // years
-  applicationDeadline: { type: String, required: true }, 
+  applicationDeadline: { type: Date, required: true }, 
 
   requiredSkills: { type: [String], required: true },
   requiredEducation: {
