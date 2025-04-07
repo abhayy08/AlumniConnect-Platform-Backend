@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Job from '../models/Job.js';
 
 export const getJobsByCurrentUser = async (req, res) => {
@@ -46,11 +47,17 @@ export const createJob = async (req, res) => {
 
 export const getJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ status: 'open', applicationDeadline: { $gte: new Date() } })
+    const userId = req.userId;
+    
+    const jobs = await Job.find({
+      status: 'open',
+      applicationDeadline: { $gte: new Date() },
+      'applications.applicant': { $ne: new mongoose.Types.ObjectId(userId) }
+    })
       .populate('postedBy', 'name')
       .select('-applications')
       .sort({ createdAt: -1 });
-    // .limit(20);
+    
     res.json(jobs);
   } catch (error) {
     res.status(500).json({ error: error.message });
