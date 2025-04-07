@@ -50,7 +50,7 @@ const jobSchema = new mongoose.Schema({
       enum: ['pending', 'reviewed', 'interviewed', 'rejected', 'accepted'],
       default: 'pending'
     },
-    appliedAt: { type: String, default: Date.now }
+    appliedAt: { type: Date, default: Date.now }
   }]
 }, { timestamps: true });
 
