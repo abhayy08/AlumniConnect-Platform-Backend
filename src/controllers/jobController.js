@@ -52,7 +52,8 @@ export const getJobs = async (req, res) => {
     const jobs = await Job.find({
       status: 'open',
       applicationDeadline: { $gte: new Date() },
-      'applications.applicant': { $ne: new mongoose.Types.ObjectId(userId) }
+      'applications.applicant': { $ne: new mongoose.Types.ObjectId(userId) },
+      'postedBy': { $ne: new mongoose.Types.ObjectId(userId) }
     })
       .populate('postedBy', 'name')
       .select('-applications')
@@ -63,6 +64,29 @@ export const getJobs = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getOffers = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const offeredJobs = await Job.find({
+      applications: {
+        $elemMatch: {
+          applicant: userId,
+          status: 'accepted'
+        }
+      }
+    })
+    .populate('postedBy', 'name email')
+    .select('-applications')
+    .lean();
+
+    return res.status(200).json(offeredJobs);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export const getJobsAppliedByUser = async (req, res) => {
   try {
