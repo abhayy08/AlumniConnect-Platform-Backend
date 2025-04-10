@@ -9,7 +9,8 @@ import {
   updateJobStatus,
   updateApplicationStatus,
   getJobsByCurrentUser,
-  getJobsAppliedByUser
+  getJobsAppliedByUser,
+  getOfferedJobs
 } from '../controllers/jobController.js';
 
 const router = express.Router();
@@ -17,6 +18,7 @@ const router = express.Router();
 router.post('/', auth, createJob);
 router.get('/', auth, getJobs);
 router.get('/applied', auth, getJobsAppliedByUser);
+router.get('/offered', auth, getOfferedJobs);
 router.get('/me', auth, getJobsByCurrentUser)
 router.get('/search', auth, searchJobs);
 router.get('/:id', auth, getJob);

@@ -65,10 +65,9 @@ export const getJobs = async (req, res) => {
   }
 };
 
-export const getOffers = async (req, res) => {
+export const getOfferedJobs = async (req, res) => {
   try {
     const userId = req.userId;
-
     const offeredJobs = await Job.find({
       applications: {
         $elemMatch: {
@@ -78,10 +77,16 @@ export const getOffers = async (req, res) => {
       }
     })
       .populate('postedBy', 'name email')
-      .select('-applications')
       .lean();
+      const filteredJobs = offeredJobs.map(job => {
+        const userApplications = job.applications.filter(app => app.applicant._id.toString() === userId.toString());
+        return {
+          ...job,
+          applications: userApplications
+        };
+      });
 
-    return res.status(200).json(offeredJobs);
+    return res.status(200).json(filteredJobs);
 
   } catch (error) {
     res.status(500).json({ error: error.message });
