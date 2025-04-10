@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import profileRoutes from './routes/profile.js';
 import jobRoutes from './routes/jobs.js';
-import eventRoutes from './routes/events.js';
+import postRoutes from './routes/posts.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -20,7 +20,7 @@ app.use(helmet());
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/jobs', jobRoutes);
-app.use('/api/events', eventRoutes);
+app.use('/api/posts', postRoutes);
 
 app.use(errorHandler);
 

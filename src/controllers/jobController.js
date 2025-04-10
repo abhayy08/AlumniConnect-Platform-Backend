@@ -4,10 +4,11 @@ import Job from '../models/Job.js';
 export const getJobsByCurrentUser = async (req, res) => {
   try {
     const jobs = await Job.find({ postedBy: req.userId })
-      .populate('applications.applicant', 'name email')
-      .sort({ createdAt: -1 });
-
-    res.json(jobs);
+    .populate('applications.applicant', 'name email')
+    .populate('postedBy', 'name email')
+    .sort({ createdAt: -1 });
+    
+    res.status(200).json(jobs);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
