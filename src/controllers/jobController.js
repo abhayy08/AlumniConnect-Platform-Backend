@@ -39,7 +39,7 @@ export const createJob = async (req, res) => {
     });
 
     await job.save();
-    res.status(201).json(job);
+    res.status(201).json({ message: "New job created successfully" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -48,7 +48,7 @@ export const createJob = async (req, res) => {
 export const getJobs = async (req, res) => {
   try {
     const userId = req.userId;
-    
+
     const jobs = await Job.find({
       status: 'open',
       applicationDeadline: { $gte: new Date() },
@@ -58,7 +58,7 @@ export const getJobs = async (req, res) => {
       .populate('postedBy', 'name')
       .select('-applications')
       .sort({ createdAt: -1 });
-    
+
     res.json(jobs);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -77,9 +77,9 @@ export const getOffers = async (req, res) => {
         }
       }
     })
-    .populate('postedBy', 'name email')
-    .select('-applications')
-    .lean();
+      .populate('postedBy', 'name email')
+      .select('-applications')
+      .lean();
 
     return res.status(200).json(offeredJobs);
 
@@ -189,7 +189,7 @@ export const searchJobs = async (req, res) => {
     if (branch) {
       filter['requiredEducation.branch'] = branch;
     }
-    
+
     if (degree) {
       filter['requiredEducation.degree'] = degree;
     }
