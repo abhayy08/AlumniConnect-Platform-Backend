@@ -40,9 +40,7 @@ export const getPosts = async (req, res) => {
     const recentConnectionPosts = await Post.find({ author: { $in: connectionIds } })
       .sort({ createdAt: -1 })
       .limit(15)
-      .populate('author', 'name jobTitle company')
-      .populate('likes', 'name')
-      .populate('comments.author', 'name');
+      .populate('author', 'name jobTitle company');
 
     const shuffledConnectionPosts = shuffleArray(recentConnectionPosts);
 
@@ -50,22 +48,29 @@ export const getPosts = async (req, res) => {
       author: { $nin: [...connectionIds, userId] }
     })
       .sort({ createdAt: -1 })
-      .populate('author', 'name jobTitle company')
-      .populate('likes', 'name')
-      .populate('comments.author', 'name');
-
+      .populate('author', 'name jobTitle company');
 
     const combinedPosts = [...shuffledConnectionPosts, ...otherPublicPosts];
 
-    const postsWithLikedByCurrentUserBool = combinedPosts.map(post => {
-      const isLiked = post.likes.some(like => like._id.toString() === userId);
+    const postsWithModifications = combinedPosts.map(post => {
+      const postObj = post.toObject();
+      
+      const isLiked = post.likes.includes(userId);
+      
+      const likesCount = post.likes.length;
+      const commentsCount = post.comments.length;
+      
       return {
-        ...post.toObject(),
-        likedByCurrentUser: isLiked
+        ...postObj,
+        likedByCurrentUser: isLiked,
+        likesCount,
+        commentsCount,
+        likes: undefined,
+        comments: undefined
       };
     });
 
-    const paginatedPosts = postsWithLikedByCurrentUserBool.slice(skip, skip + limit);
+    const paginatedPosts = postsWithModifications.slice(skip, skip + limit);
 
     res.json(paginatedPosts);
   } catch (error) {
@@ -87,7 +92,6 @@ export const getPostComments = async (req, res) => {
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    // Apply pagination to comments
     const paginatedComments = post.comments
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(skip, skip + limit);
