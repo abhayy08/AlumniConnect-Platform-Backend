@@ -126,11 +126,15 @@ export const getJob = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id)
       .populate('postedBy', 'name')
-      .populate('applications.applicant', 'name ');
+      .populate({
+        path: 'applications.applicant',
+        select: 'name email'
+      });
 
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
+
     res.json(job);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -166,6 +170,7 @@ export const applyForJob = async (req, res) => {
 export const searchJobs = async (req, res) => {
   try {
     const {
+      title,
       location,
       minExperience,
       graduationYear,
@@ -176,6 +181,10 @@ export const searchJobs = async (req, res) => {
 
     const filter = { status: 'open' };
 
+    if(title) {
+      filter.title = { $regex: title, $options: 'i' };
+    }
+  
     if (location) {
       filter.location = location; // values : 'remote', 'in-office', or 'hybrid'
     }
@@ -202,6 +211,7 @@ export const searchJobs = async (req, res) => {
 
     const jobs = await Job.find(filter)
       .populate('postedBy', 'name')
+      .select("-applications")
       .sort({ createdAt: -1 });
 
     res.json(jobs);
