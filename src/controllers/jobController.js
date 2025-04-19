@@ -194,9 +194,9 @@ export const searchJobs = async (req, res) => {
     }
 
     if (graduationYear) {
-      filter.graduationYear = parseInt(graduationYear);
+      filter.graduationYear = { $gte: parseInt(graduationYear) };
     }
-
+    
     if (jobType) {
       filter.jobType = jobType; // values: 'full-time', 'part-time', etc.
     }
