@@ -4,10 +4,10 @@ import Job from '../models/Job.js';
 export const getJobsByCurrentUser = async (req, res) => {
   try {
     const jobs = await Job.find({ postedBy: req.userId })
-    .populate('applications.applicant', 'name email')
-    .populate('postedBy', 'name email')
-    .sort({ createdAt: -1 });
-    
+      .populate('applications.applicant', 'name email')
+      .populate('postedBy', 'name email')
+      .sort({ createdAt: -1 });
+
     res.status(200).json(jobs);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -79,13 +79,13 @@ export const getOfferedJobs = async (req, res) => {
     })
       .populate('postedBy', 'name email')
       .lean();
-      const filteredJobs = offeredJobs.map(job => {
-        const userApplications = job.applications.filter(app => app.applicant._id.toString() === userId.toString());
-        return {
-          ...job,
-          applications: userApplications
-        };
-      });
+    const filteredJobs = offeredJobs.map(job => {
+      const userApplications = job.applications.filter(app => app.applicant._id.toString() === userId.toString());
+      return {
+        ...job,
+        applications: userApplications
+      };
+    });
 
     return res.status(200).json(filteredJobs);
 
@@ -117,10 +117,47 @@ export const getJobsAppliedByUser = async (req, res) => {
     res.status(200).json(filteredJobs);
   } catch (error) {
     console.error('Error fetching jobs applied by user:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: `Internal server error: ${error.message}` });
   }
 };
 
+export const getApplicantsOfJob = async (req, res) => {
+  try {
+    const jobId = req.params.id;
+    const userId = req.userId;
+
+    const job = await Job.findById(jobId)
+      .populate({
+        path: 'applications.applicant',
+        select: '_id name email'
+      });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.postedBy.toString() !== userId.toString()) {
+      return res.status(403).json({ 
+        error: 'Unauthorized: You can only view applicants for jobs you posted' 
+      });
+    }
+
+    const applicants = job.applications.map(application => ({
+      _userId: application._id,
+      name: application.applicant.name,
+      email: application.applicant.email,
+      _applicationId: application._id,
+      status: application.status,
+      appliedAt: application.appliedAt,
+      resumeLink: application.resumeLink
+    }));
+
+    return res.status(200).json(applicants);
+  } catch (error) {
+    console.error('Error fetching jobs applied by user:', error);
+    res.status(500).json({ error: `Internal server error: ${error.message}` });
+  }
+}
 
 export const getJob = async (req, res) => {
   try {
@@ -179,12 +216,14 @@ export const searchJobs = async (req, res) => {
       degree
     } = req.query;
 
+    const currentUserId = req.userId;
+
     const filter = { status: 'open' };
 
-    if(title) {
+    if (title) {
       filter.title = { $regex: title, $options: 'i' };
     }
-  
+
     if (location) {
       filter.location = location; // values : 'remote', 'in-office', or 'hybrid'
     }
@@ -196,7 +235,7 @@ export const searchJobs = async (req, res) => {
     if (graduationYear) {
       filter.graduationYear = { $gte: parseInt(graduationYear) };
     }
-    
+
     if (jobType) {
       filter.jobType = jobType; // values: 'full-time', 'part-time', etc.
     }
@@ -211,10 +250,23 @@ export const searchJobs = async (req, res) => {
 
     const jobs = await Job.find(filter)
       .populate('postedBy', 'name')
-      .select("-applications")
       .sort({ createdAt: -1 });
 
-    res.json(jobs);
+    const jobsWithApplicationStatus = jobs.map(job => {
+      const jobObj = job.toObject();
+
+      const alreadyApplied = currentUserId ?
+        jobObj.applications.some(app =>
+          app.applicant.toString() === currentUserId.toString()
+        ) : false;
+
+      jobObj.alreadyApplied = alreadyApplied;
+      delete jobObj.applications;
+
+      return jobObj;
+    });
+
+    res.json(jobsWithApplicationStatus);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -251,7 +303,6 @@ export const updateApplicationStatus = async (req, res) => {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Check if the request is from the job poster
     if (job.postedBy.toString() !== req.userId) {
       return res.status(403).json({ error: 'Not authorized to update applications' });
     }
@@ -264,7 +315,7 @@ export const updateApplicationStatus = async (req, res) => {
     application.status = status;
     await job.save();
 
-    res.json(job);
+    res.json({ message: 'Application status updated successfully' });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
