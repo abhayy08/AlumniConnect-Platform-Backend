@@ -116,10 +116,28 @@ export const getJobsAppliedByUser = async (req, res) => {
 
     res.status(200).json(filteredJobs);
   } catch (error) {
-    console.error('Error fetching jobs applied by user:', error);
     res.status(500).json({ error: `Internal server error: ${error.message}` });
   }
 };
+
+export const getJobsByUserId = async (req, res) => {
+  try {
+
+    const userIdToFindFor = req.params.id;
+
+    const jobs = await Job.find({
+      postedBy: { $eq: new mongoose.Types.ObjectId(userIdToFindFor) }
+    })
+      .sort({ createdAt: -1 })
+      .populate('postedBy', 'name email')
+      .select('-applications')
+      .lean();
+
+    res.status(200).json(jobs)
+  } catch (error) {
+    res.status(500).json({ error: `Internal server error: ${error.message}` });
+  }
+}
 
 export const getApplicantsOfJob = async (req, res) => {
   try {
@@ -137,13 +155,13 @@ export const getApplicantsOfJob = async (req, res) => {
     }
 
     if (job.postedBy.toString() !== userId.toString()) {
-      return res.status(403).json({ 
-        error: 'Unauthorized: You can only view applicants for jobs you posted' 
+      return res.status(403).json({
+        error: 'Unauthorized: You can only view applicants for jobs you posted'
       });
     }
 
     const applicants = job.applications.map(application => ({
-      _userId: application._id,
+      _userId: application.applicant._id,
       name: application.applicant.name,
       email: application.applicant.email,
       _applicationId: application._id,
