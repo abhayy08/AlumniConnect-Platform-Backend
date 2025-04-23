@@ -8,6 +8,8 @@ export const getJobsByCurrentUser = async (req, res) => {
       .populate('postedBy', 'name email')
       .sort({ createdAt: -1 });
 
+    // No need to add alreadyApplied here since these are the user's own posted jobs
+
     res.status(200).json(jobs);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -57,10 +59,17 @@ export const getJobs = async (req, res) => {
       'postedBy': { $ne: new mongoose.Types.ObjectId(userId) }
     })
       .populate('postedBy', 'name')
-      .select('-applications')
       .sort({ createdAt: -1 });
 
-    res.json(jobs);
+    // Since this query specifically excludes jobs the user has applied to,
+    // alreadyApplied is always false for these jobs
+    const jobsWithApplicationStatus = jobs.map(job => {
+      const jobObj = job.toObject ? job.toObject() : job;
+      jobObj.alreadyApplied = false;
+      return jobObj;
+    });
+
+    res.json(jobsWithApplicationStatus);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -84,7 +93,8 @@ export const getOfferedJobs = async (req, res) => {
 
       return {
         ...job,
-        applications: userApplications
+        applications: userApplications,
+        alreadyApplied: true // These are jobs the user has applied to and was accepted
       };
     });
 
@@ -111,7 +121,8 @@ export const getJobsAppliedByUser = async (req, res) => {
       const userApplications = job.applications.filter(app => app.applicant._id.toString() === userId.toString());
       return {
         ...job,
-        applications: userApplications
+        applications: userApplications,
+        alreadyApplied: true // By definition, all these jobs have been applied to by the user
       };
     });
 
@@ -129,18 +140,33 @@ export const getJobsAppliedByUser = async (req, res) => {
 
 export const getJobsByUserId = async (req, res) => {
   try {
-
     const userIdToFindFor = req.params.id;
+    const currentUserId = req.userId;
 
     const jobs = await Job.find({
       postedBy: { $eq: new mongoose.Types.ObjectId(userIdToFindFor) }
     })
       .sort({ createdAt: -1 })
       .populate('postedBy', 'name email')
-      .select('-applications')
       .lean();
 
-    res.status(200).json(jobs)
+    // Check if current user has applied to any of these jobs
+    const jobsWithApplicationStatus = jobs.map(job => {
+      const jobObj = { ...job };
+      
+      // Remove applications from response but check if current user has applied
+      const alreadyApplied = currentUserId ? 
+        job.applications && job.applications.some(app => 
+          app.applicant && app.applicant.toString() === currentUserId.toString()
+        ) : false;
+      
+      jobObj.alreadyApplied = alreadyApplied;
+      delete jobObj.applications; // Maintain the original behavior of excluding applications
+      
+      return jobObj;
+    });
+
+    res.status(200).json(jobsWithApplicationStatus);
   } catch (error) {
     res.status(500).json({ error: `Internal server error: ${error.message}` });
   }
@@ -184,8 +210,9 @@ export const getApplicantsOfJob = async (req, res) => {
   }
 }
 
-export const getJobWithApplications = async (req, res) => {
+export const getJobById = async (req, res) => {
   try {
+    const userId = req.userId;
     const job = await Job.findById(req.params.id)
       .populate('postedBy', 'name email')
       .populate({
@@ -197,7 +224,16 @@ export const getJobWithApplications = async (req, res) => {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    res.json(job);
+    const applications = job.applications.filter(app => app.applicant._id.toString() === userId.toString());
+    const alreadyApplied = applications.length > 0;
+    
+    const modifiedJob = {
+      ...job.toObject(),
+      applications: applications,
+      alreadyApplied: alreadyApplied
+    };
+
+    res.json(modifiedJob);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -325,7 +361,14 @@ export const updateJobStatus = async (req, res) => {
     job.status = status;
     await job.save();
 
-    res.json(job);
+    // Add alreadyApplied field to the response
+    const jobObj = job.toObject();
+    const alreadyApplied = jobObj.applications.some(app => 
+      app.applicant.toString() === req.userId.toString()
+    );
+    jobObj.alreadyApplied = alreadyApplied;
+
+    res.json(jobObj);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
