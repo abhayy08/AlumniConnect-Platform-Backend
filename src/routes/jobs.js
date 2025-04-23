@@ -3,7 +3,6 @@ import { auth } from '../middleware/auth.js';
 import {
   createJob,
   getJobs,
-  getJob,
   applyForJob,
   searchJobs,
   updateJobStatus,
@@ -12,7 +11,8 @@ import {
   getOfferedJobs,
   getApplicantsOfJob,
   updateApplicationStatus,
-  getJobsByUserId
+  getJobsByUserId,
+  getJobWithApplications
 } from '../controllers/jobController.js';
 
 const router = express.Router();
@@ -25,7 +25,7 @@ router.get('/offered', auth, getOfferedJobs);
 router.get('/me', auth, getJobsByCurrentUser)
 router.get('/:id/applicants', auth, getApplicantsOfJob);
 router.get('/search', auth, searchJobs);
-router.get('/:id', auth, getJob);
+router.get('/:id', auth, getJobWithApplications);
 router.post('/:id/apply', auth, applyForJob);
 router.patch('/:id/status', auth, updateJobStatus);
 router.patch('/:id/application', auth, updateApplicationStatus);

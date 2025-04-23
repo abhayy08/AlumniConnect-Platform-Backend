@@ -81,6 +81,7 @@ export const getOfferedJobs = async (req, res) => {
       .lean();
     const filteredJobs = offeredJobs.map(job => {
       const userApplications = job.applications.filter(app => app.applicant._id.toString() === userId.toString());
+
       return {
         ...job,
         applications: userApplications
@@ -113,6 +114,12 @@ export const getJobsAppliedByUser = async (req, res) => {
         applications: userApplications
       };
     });
+
+    filteredJobs.sort((a, b) => {
+      const aDate = a.applications[0]?.appliedAt || new Date(0);
+      const bDate = b.applications[0]?.appliedAt || new Date(0);
+      return bDate - aDate; // Descending Order me
+    })
 
     res.status(200).json(filteredJobs);
   } catch (error) {
@@ -177,10 +184,10 @@ export const getApplicantsOfJob = async (req, res) => {
   }
 }
 
-export const getJob = async (req, res) => {
+export const getJobWithApplications = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id)
-      .populate('postedBy', 'name')
+      .populate('postedBy', 'name email')
       .populate({
         path: 'applications.applicant',
         select: 'name email'
@@ -231,7 +238,8 @@ export const searchJobs = async (req, res) => {
       graduationYear,
       jobType,
       branch,
-      degree
+      degree,
+      skills
     } = req.query;
 
     const currentUserId = req.userId;
@@ -264,6 +272,17 @@ export const searchJobs = async (req, res) => {
 
     if (degree) {
       filter['requiredEducation.degree'] = degree;
+    }
+
+    if (skills) {
+
+      if (typeof skills === 'string' && skills.includes(',')) {
+        const skillsArray = skills.split(',').map(skill => new RegExp(skill.trim(), 'i'));
+
+        filter.requiredSkills = { $in: skillsArray };
+      } else {
+        filter.requiredSkills = { $in: skills };
+      }
     }
 
     const jobs = await Job.find(filter)
