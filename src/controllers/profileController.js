@@ -14,17 +14,32 @@ export const getProfile = async (req, res) => {
 
 export const getDetailedProfile = async (req, res) => {
   try {
-    const userId = req.params.userId || req.userId;
+    const currentUserId = req.userId;
+    const userId = req.params.userId || currentUserId;
 
-    const user = await User.findById(userId)
-      .select('-password')
-      .populate('connections', 'name jobTitle company');
+    const user = await User.findById(userId).select('-password');
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    // Determine connectionCount
+    const connectionCount = user.connections.length;
+
+    // Determine if current user is connected to this user
+    const isConnected = user.connections.some(
+      connectionId => connectionId.toString() === currentUserId
+    );
+
+    // Convert user to object to add new properties
+    const userObj = user.toObject();
+
+    // Replace connections with connectionCount and isConnected
+    userObj.connectionCount = connectionCount;
+    userObj.isConnected = isConnected;
+    delete userObj.connections;
+
+    res.json(userObj);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -306,7 +321,11 @@ export const getConnections = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user.connections);
+    const filteredConnections = user.connections.filter(
+      connection => connection._id.toString() !== req.userId
+    );
+
+    res.json(filteredConnections);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
