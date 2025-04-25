@@ -33,6 +33,6 @@ router.get('/suggested', auth, getSuggestedConnections);
 // Connection management - simplified, direct connections
 router.post('/connect/:connectionId', auth, addConnection);
 router.delete('/connect/:connectionId', auth, removeConnection);
-router.get('/connections', auth, getConnections);
+router.get('/connections/:id?', auth, getConnections);
 
 export default router;

@@ -296,8 +296,10 @@ export const removeConnection = async (req, res) => {
 
 export const getConnections = async (req, res) => {
   try {
-    const user = await User.findById(req.userId)
-      .populate('connections', 'name jobTitle company location')
+    const userId = req.params.id || req.userId;
+
+    const user = await User.findById(userId)
+      .populate('connections', 'name email jobTitle company location')
       .select('connections');
 
     if (!user) {
