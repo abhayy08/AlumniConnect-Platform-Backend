@@ -9,11 +9,12 @@ import {
   deletePost,
   getPostComments
 } from '../controllers/postController.js';
+import upload from '../middleware/imageUpload.js';
 
 const router = express.Router();
 
 // Post routes
-router.post('/', auth, createPost);
+router.post('/', auth, upload.single('image'), createPost);
 router.get('/', auth, getPosts);
 router.post('/:id/like', auth, likePost);
 router.post('/:id/comment', auth, commentOnPost);

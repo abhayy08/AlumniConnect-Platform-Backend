@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 import cloudinary from '../config/cloudinary.js';
-import { Readable } from 'stream';
+import { bufferToStream } from '../utils/helperFunctions.js';
 
 export const getProfile = async (req, res) => {
   try {
@@ -42,17 +42,6 @@ export const getDetailedProfile = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-};
-
-// Helper function to upload buffer to Cloudinary via stream
-const bufferToStream = (buffer) => {
-  const readable = new Readable({
-    read() {
-      this.push(buffer);
-      this.push(null);
-    }
-  });
-  return readable;
 };
 
 export const uploadProfileImage = async (req, res) => {
