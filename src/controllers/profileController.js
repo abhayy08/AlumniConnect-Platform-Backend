@@ -1,4 +1,6 @@
 import User from '../models/User.js';
+import cloudinary from '../config/cloudinary.js';
+import { Readable } from 'stream';
 
 export const getProfile = async (req, res) => {
   try {
@@ -23,15 +25,12 @@ export const getDetailedProfile = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Determine connectionCount
     const connectionCount = user.connections.length;
 
-    // Determine if current user is connected to this user
     const isConnected = user.connections.some(
       connectionId => connectionId.toString() === currentUserId
     );
 
-    // Convert user to object to add new properties
     const userObj = user.toObject();
 
     // Replace connections with connectionCount and isConnected
@@ -40,6 +39,102 @@ export const getDetailedProfile = async (req, res) => {
     delete userObj.connections;
 
     res.json(userObj);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Helper function to upload buffer to Cloudinary via stream
+const bufferToStream = (buffer) => {
+  const readable = new Readable({
+    read() {
+      this.push(buffer);
+      this.push(null);
+    }
+  });
+  return readable;
+};
+
+export const uploadProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.profileImageId) {
+      try {
+        await cloudinary.uploader.destroy(user.profileImageId);
+      } catch (err) {
+        console.error('Failed to delete previous image:', err);
+      }
+    }
+    
+    const folderPath = `alumni_network/profile_images/${req.userId}`;
+    
+    // Upload new image to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: folderPath,
+          resource_type: 'image',
+          transformation: [
+            { width: 400, height: 400, crop: 'limit' },
+            { quality: 'auto:good' }
+          ]
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
+      
+      bufferToStream(req.file.buffer).pipe(uploadStream);
+    });
+
+    user.profileImage = result.secure_url;
+    user.profileImageId = result.public_id;
+    await user.save();
+
+    res.json({
+      message: 'Profile image uploaded successfully',
+      profileImage: user.profileImage
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const removeProfileImage = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete image from Cloudinary if it exists
+    if (user.profileImageId) {
+      try {
+        await cloudinary.uploader.destroy(user.profileImageId);
+      } catch (err) {
+        console.error('Failed to delete image from Cloudinary:', err);
+        // Continue with profile update even if Cloudinary deletion fails
+      }
+    }
+
+    // Reset profile image to default
+    user.profileImage = 'https://res.cloudinary.com/demo/image/upload/v1/sample/default-profile';
+    user.profileImageId = '';
+    await user.save();
+
+    res.json({
+      message: 'Profile image removed successfully',
+      profileImage: user.profileImage
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

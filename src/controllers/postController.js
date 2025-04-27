@@ -48,7 +48,7 @@ export const getPosts = async (req, res) => {
       author: { $nin: [...connectionIds, userId] }
     })
       .sort({ createdAt: -1 })
-      .populate('author', 'name jobTitle company');
+      .populate('author', 'name jobTitle company profileImage');
 
     const combinedPosts = [...shuffledConnectionPosts, ...otherPublicPosts];
 
@@ -99,7 +99,7 @@ export const getPostComments = async (req, res) => {
 
     const populatedComments = await Promise.all(
       paginatedComments.map(async (comment) => {
-        const author = await User.findById(comment.author).select('name');
+        const author = await User.findById(comment.author).select('name profileImage');
         return {
           _id: comment._id,
           comment: comment.comment,

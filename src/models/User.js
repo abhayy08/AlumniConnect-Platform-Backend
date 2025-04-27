@@ -33,6 +33,18 @@ const userSchema = new mongoose.Schema({
         description: { type: String }
     }],
 
+    // Profile image fields
+    profileImage: { 
+        type: String, 
+        default: "" 
+    },
+
+    // Store Cloudinary public_id for easier image management
+    profileImageId: {
+        type: String,
+        default: ""
+    },
+
     // Networking - direct connections only, no requests
     connections: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 

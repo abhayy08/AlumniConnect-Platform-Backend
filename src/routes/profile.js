@@ -11,14 +11,21 @@ import {
   getConnections,
   getSuggestedConnections,
   addWorkExperience,
-  deleteExperienceById
+  deleteExperienceById,
+  uploadProfileImage,
+  removeProfileImage
 } from '../controllers/profileController.js';
+import upload from '../middleware/imageUpload.js';
 
 const router = express.Router();
 
 // Basic profile routes
 router.get('/me', auth, getProfile);
 router.put('/me', auth, updateProfile);
+
+// Profile image routes with Cloudinary
+router.post('/me/profile-image', auth, upload.single('image'), uploadProfileImage);
+router.delete('/me/profile-image', auth, removeProfileImage);
 
 // Detailed profile routes
 router.get('/detailed/:userId?', auth, getDetailedProfile);
