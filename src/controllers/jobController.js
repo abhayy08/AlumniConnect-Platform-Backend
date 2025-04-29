@@ -345,6 +345,30 @@ export const searchJobs = async (req, res) => {
   }
 };
 
+export const deleteJob = async (req, res) => {
+  const { jobId } = req.params;
+  const currentUserId = req.userId;
+
+  try {
+    const job = await Job.findById(jobId);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.postedBy.toString() !== currentUserId) {
+      return res.status(403).json({ error: 'Not authorized to delete this job' });
+    }
+
+    await Job.findByIdAndDelete(jobId);
+
+    return res.status(200).json({ message: 'Job deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting job:', error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 export const updateJobStatus = async (req, res) => {
   try {
     const { status } = req.body;
