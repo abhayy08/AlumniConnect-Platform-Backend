@@ -21,7 +21,7 @@ export const createPost = async (req, res) => {
     if (req.file) {
       try {
         const folderPath = `alumni_network/post_images/${req.userId}`;
-        
+
         // Upload new image to Cloudinary using stream
         const result = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
@@ -41,11 +41,11 @@ export const createPost = async (req, res) => {
           bufferToStream(req.file.buffer).pipe(uploadStream);
 
         });
-        
+
         // Add imageUrl and imageId to post data
         postData.imageUrl = result.secure_url;
         postData.imageId = result.public_id; // Store public_id for potential deletion later
-        
+
       } catch (uploadError) {
         console.error('Image upload error:', uploadError);
         return res.status(400).json({ error: 'Failed to upload image' });
@@ -54,12 +54,12 @@ export const createPost = async (req, res) => {
 
     const post = new Post(postData);
     await post.save();
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       message: "New post created successfully",
       imageUrl: post.imageUrl || ''
     });
-    
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -70,46 +70,46 @@ export const getPosts = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    
+
     const currentUser = await User.findById(req.userId);
     if (!currentUser) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     const connectionIds = currentUser.connections.map(id => id.toString());
     const userId = req.userId;
-    
+
     // Get recent posts from connections
     const recentConnectionPosts = await Post.find({ author: { $in: connectionIds } })
       .sort({ createdAt: -1 })
       .limit(15)
       .populate('author', 'name jobTitle company profileImage');
-    
+
     const shuffledConnectionPosts = shuffleArray(recentConnectionPosts);
-      
+
 
     const currentUserPosts = await Post.find({ author: userId })
       .sort({ createdAt: -1 })
       .limit(3)
       .populate('author', 'name jobTitle company profileImage');
-    
+
     // Get Posts by other users that are not in the user's connection
     const otherPublicPosts = await Post.find({
       author: { $nin: [...connectionIds, userId] }
     })
       .sort({ createdAt: -1 })
       .populate('author', 'name jobTitle company profileImage');
-    
+
 
     const combinedPosts = [...currentUserPosts, ...shuffledConnectionPosts, ...otherPublicPosts];
-    
+
     const postsWithModifications = combinedPosts.map(post => {
       const postObj = post.toObject();
-      
+
       const isLiked = post.likes.includes(userId);
       const likesCount = post.likes.length;
       const commentsCount = post.comments.length;
-      
+
       return {
         ...postObj,
         likedByCurrentUser: isLiked,
@@ -119,13 +119,44 @@ export const getPosts = async (req, res) => {
         comments: undefined
       };
     });
-    
+
     const paginatedPosts = postsWithModifications.slice(skip, skip + limit);
     res.json(paginatedPosts);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getPostsByUserId = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.userId; // userId of current user
+
+  try {
+    const posts = await Post.find({ author: id })
+      .sort({ createdAt: -1 })
+      .populate('author', 'name jobTitle company profileImage');
+
+    const changedPosts = posts.map(post => {
+      const postObj = post.toObject();
+
+      const isLiked = post.likes.includes(userId);
+      const likesCount = post.likes.length;
+      const commentsCount = post.comments.length;
+      return {
+        ...postObj,
+        likedByCurrentUser: isLiked,
+        likesCount,
+        commentsCount,
+        likes: undefined,
+        comments: undefined
+      };
+    });
+
+    res.json(changedPosts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export const getPostComments = async (req, res) => {
   try {
@@ -185,7 +216,7 @@ export const likePost = async (req, res) => {
 
     await post.save();
 
-    res.json({message: "Post liked successfully!"});
+    res.json({ message: "Post liked successfully!" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -214,7 +245,7 @@ export const commentOnPost = async (req, res) => {
     post.comments.push(newComment);
     await post.save();
 
-    res.json({message: "Comment added successfully!"});
+    res.json({ message: "Comment added successfully!" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -248,7 +279,7 @@ export const deleteComment = async (req, res) => {
     post.comments.splice(commentIndex, 1);
     await post.save();
 
-    res.json({message: "Comment deleted successfully!"});
+    res.json({ message: "Comment deleted successfully!" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

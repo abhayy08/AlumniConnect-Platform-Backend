@@ -7,7 +7,8 @@ import {
   commentOnPost,
   deleteComment,
   deletePost,
-  getPostComments
+  getPostComments,
+  getPostsByUserId
 } from '../controllers/postController.js';
 import upload from '../middleware/imageUpload.js';
 
@@ -16,6 +17,7 @@ const router = express.Router();
 // Post routes
 router.post('/', auth, upload.single('image'), createPost);
 router.get('/', auth, getPosts);
+router.get('/:id', auth, getPostsByUserId);
 router.post('/:id/like', auth, likePost);
 router.post('/:id/comment', auth, commentOnPost);
 router.get('/:postId/comment', auth, getPostComments)
