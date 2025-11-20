@@ -32,7 +32,7 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch(err => console.error("MongoDB connection error:", err));
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8181;
 const server = app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
 
 // Graceful shutdown: close HTTP server and MongoDB connection
