@@ -1,0 +1,25 @@
+# Render service manifest (fill values and secrets in Render dashboard)
+# See https://render.com/docs/deploy-using-render-yaml for details
+services:
+  - type: web
+    name: alumni-platform-backend
+    env: node
+    plan: free
+    branch: master
+    repo: "abhayy08/AlumniConnect-Platform-Backend"
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        value: ""
+      - key: JWT_SECRET
+        value: ""
+      - key: CLOUDINARY_CLOUD_NAME
+        value: ""
+      - key: CLOUDINARY_API_KEY
+        value: ""
+      - key: CLOUDINARY_API_SECRET
+        value: ""
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /
